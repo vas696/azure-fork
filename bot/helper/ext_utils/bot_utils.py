@@ -1,4 +1,4 @@
-from re import match as re_match, findall as re_findall
+from re import match, findall
 from threading import Thread, Event
 from time import time
 from math import ceil
@@ -101,19 +101,22 @@ def getAllDownload(req_status: str):
     return None
 
 def get_progress_bar_string(status):
-    completed = status.processed_bytes() / 8
-    total = status.size_raw() / 8
+    completed = status.processed_bytes() / 10
+    total = status.size_raw() / 10
     p = 0 if total == 0 else round(completed * 100 / total)
     p = min(max(p, 0), 100)
-    cFull = p // 8
-    p_str = '■' * cFull
-    p_str += '□' * (12 - cFull)
+    cFull = p // 10
+    p_str = '🚀' * cFull
+    p_str += '🕳' * (10 - cFull)
     p_str = f"[{p_str}]"
     return p_str
 
 def get_readable_message():
     with download_dict_lock:
-        msg = "▁ ▂ ⚡ Speed Mirroring ⚡ ▂ ▁\n\n"
+        msg = "▁ ▂ ▄ Mirroring in Progress ▄ ▂ ▁\n\n"
+        dlspeed_bytes = 0
+        upspeed_bytes = 0
+        START = 0
         if STATUS_LIMIT is not None:
             tasks = len(download_dict)
             global pages
@@ -121,7 +124,8 @@ def get_readable_message():
             if PAGE_NO > pages and pages != 0:
                 globals()['COUNT'] -= STATUS_LIMIT
                 globals()['PAGE_NO'] -= 1
-        for index, download in enumerate(list(download_dict.values())[COUNT:], start=1):
+            START = COUNT
+        for index, download in enumerate(list(download_dict.values())[START:], start=1):
             msg += f"<b>✍️Name:</b> <code>{escape(str(download.name()))}</code>"
             msg += f"\n<b>⏳Status:</b> <i>{download.status()}</i>"
             if download.status() not in [
@@ -163,7 +167,7 @@ def get_readable_message():
             if STATUS_LIMIT is not None and index == STATUS_LIMIT:
                 break
         free = get_readable_file_size(disk_usage(DOWNLOAD_DIR).free)
-        currentTime = get_readable_time(time() - botStartTime)        
+        currentTime = get_readable_time(time() - botStartTime)
         bmsg = f"<b>⚙️CPU:</b> {cpu_percent()}% | <b>🔋FREE:</b> {free}"
         for download in list(download_dict.values()):
             spd = download.speed()
@@ -189,6 +193,7 @@ def get_readable_message():
             button = InlineKeyboardMarkup(buttons.build_menu(2))
             return msg + bmsg, button
         return msg + bmsg, ""
+
 
 def turn(data):
     try:
@@ -231,30 +236,21 @@ def get_readable_time(seconds: int) -> str:
     return result
 
 def is_url(url: str):
-    url = re_findall(URL_REGEX, url)
+    url = findall(URL_REGEX, url)
     return bool(url)
 
 def is_gdrive_link(url: str):
     return "drive.google.com" in url
 
 def is_gdtot_link(url: str):
-    url = re_match(r'https?://.+\.gdtot\.\S+', url)
+    url = match(r'https?://.+\.gdtot\.\S+', url)
     return bool(url)
 
 def is_mega_link(url: str):
     return "mega.nz" in url or "mega.co.nz" in url
 
-def get_mega_link_type(url: str):
-    if "folder" in url:
-        return "folder"
-    elif "file" in url:
-        return "file"
-    elif "/#F!" in url:
-        return "folder"
-    return "file"
-
 def is_magnet(url: str):
-    magnet = re_findall(MAGNET_REGEX, url)
+    magnet = findall(MAGNET_REGEX, url)
     return bool(magnet)
 
 def new_thread(fn):
@@ -281,4 +277,3 @@ def get_content_type(link: str) -> str:
         except:
             content_type = None
     return content_type
-
